@@ -212,7 +212,7 @@ public class GameWindow extends JFrame {
         // настройка внешнего вида кнопки: размер, шрифт, цвет, отключение рамки по фокусу, отступы
         button.setPreferredSize(new Dimension(140, 40));
         button.setFont(new Font("Arial", Font.BOLD, 14));
-        button.setForeground(Color.WHITE);
+        button.setForeground(Color.BLACK);
         button.setBackground(color);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));

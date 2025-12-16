@@ -188,7 +188,7 @@ public class LoginWindow extends JFrame {
         // настройка шрифта
         button.setFont(new Font("Arial", Font.BOLD, 14));
         // белый цвет
-        button.setForeground(Color.WHITE);
+        button.setForeground(Color.BLACK);
         // основной цвет
         button.setBackground(color);
         // отключение рамки при фокусировке
