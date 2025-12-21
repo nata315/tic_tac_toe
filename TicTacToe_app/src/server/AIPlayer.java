@@ -1,18 +1,19 @@
-//Логика ИИ-соперника
-
-
 package server;
-import shared.*;
+
+import shared.Move;
+import java.util.ArrayList;
+import java.util.Random;
 
 public class AIPlayer {
+    private Random random = new Random();
 
-    public Move getRandomMove(char[][] board) {
-        java.util.ArrayList<Move> emptyCells = new java.util.ArrayList<>();
+    public Move getRandomMove(String[][] board) {
+        ArrayList<Move> emptyCells = new ArrayList<>();
 
         // Найти все пустые клетки
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                if (board[i][j] == ' ') {
+                if (board[i][j] == null || board[i][j].isEmpty()) {
                     emptyCells.add(new Move(i, j));
                 }
             }
@@ -23,15 +24,13 @@ public class AIPlayer {
             return null;
         }
 
-        java.util.Random rand = new java.util.Random();
-        return emptyCells.get(rand.nextInt(emptyCells.size()));
+        return emptyCells.get(random.nextInt(emptyCells.size()));
     }
 
-    // Добавлен метод isBoardFull() в этот же класс
-    public boolean isBoardFull(char[][] board) {
+    public boolean isBoardFull(String[][] board) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                if (board[i][j] == ' ') {
+                if (board[i][j] == null || board[i][j].isEmpty()) {
                     return false;
                 }
             }
@@ -39,7 +38,7 @@ public class AIPlayer {
         return true;
     }
 
-    public Move getBestMove(char[][] board, char aiSymbol, char playerSymbol) {
+    public Move getBestMove(String[][] board, String aiSymbol, String playerSymbol) {
         // Простая эвристика: сначала проверяем, можем ли выиграть
         Move winningMove = findWinningMove(board, aiSymbol);
         if (winningMove != null) return winningMove;
@@ -49,12 +48,14 @@ public class AIPlayer {
         if (blockingMove != null) return blockingMove;
 
         // Если центр свободен - занимаем центр
-        if (board[1][1] == ' ') return new Move(1, 1);
+        if (board[1][1] == null || board[1][1].isEmpty()) {
+            return new Move(1, 1);
+        }
 
         // Затем углы
         int[][] corners = {{0,0}, {0,2}, {2,0}, {2,2}};
         for (int[] corner : corners) {
-            if (board[corner[0]][corner[1]] == ' ') {
+            if (board[corner[0]][corner[1]] == null || board[corner[0]][corner[1]].isEmpty()) {
                 return new Move(corner[0], corner[1]);
             }
         }
@@ -63,14 +64,17 @@ public class AIPlayer {
         return getRandomMove(board);
     }
 
-    private Move findWinningMove(char[][] board, char symbol) {
+    private Move findWinningMove(String[][] board, String symbol) {
         // Проверка строк
         for (int i = 0; i < 3; i++) {
             int count = 0;
             Move emptyCell = null;
             for (int j = 0; j < 3; j++) {
-                if (board[i][j] == symbol) count++;
-                else if (board[i][j] == ' ') emptyCell = new Move(i, j);
+                if (symbol.equals(board[i][j])) {
+                    count++;
+                } else if (board[i][j] == null || board[i][j].isEmpty()) {
+                    emptyCell = new Move(i, j);
+                }
             }
             if (count == 2 && emptyCell != null) return emptyCell;
         }
@@ -80,8 +84,11 @@ public class AIPlayer {
             int count = 0;
             Move emptyCell = null;
             for (int i = 0; i < 3; i++) {
-                if (board[i][j] == symbol) count++;
-                else if (board[i][j] == ' ') emptyCell = new Move(i, j);
+                if (symbol.equals(board[i][j])) {
+                    count++;
+                } else if (board[i][j] == null || board[i][j].isEmpty()) {
+                    emptyCell = new Move(i, j);
+                }
             }
             if (count == 2 && emptyCell != null) return emptyCell;
         }
@@ -90,16 +97,22 @@ public class AIPlayer {
         int count = 0;
         Move emptyCell = null;
         for (int i = 0; i < 3; i++) {
-            if (board[i][i] == symbol) count++;
-            else if (board[i][i] == ' ') emptyCell = new Move(i, i);
+            if (symbol.equals(board[i][i])) {
+                count++;
+            } else if (board[i][i] == null || board[i][i].isEmpty()) {
+                emptyCell = new Move(i, i);
+            }
         }
         if (count == 2 && emptyCell != null) return emptyCell;
 
         count = 0;
         emptyCell = null;
         for (int i = 0; i < 3; i++) {
-            if (board[i][2-i] == symbol) count++;
-            else if (board[i][2-i] == ' ') emptyCell = new Move(i, 2-i);
+            if (symbol.equals(board[i][2-i])) {
+                count++;
+            } else if (board[i][2-i] == null || board[i][2-i].isEmpty()) {
+                emptyCell = new Move(i, 2-i);
+            }
         }
         if (count == 2 && emptyCell != null) return emptyCell;
 

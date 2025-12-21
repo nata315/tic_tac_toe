@@ -132,14 +132,25 @@ public class ClientNetwork {
 
     public void sendMove(String gameId, int row, int col) {
         try {
+            System.out.println("\n=== КЛИЕНТ: Отправка хода ===");
+            System.out.println("GameID: " + gameId);
+            System.out.println("Ход: [" + row + "," + col + "]");
+            System.out.println("Пользователь: " + currentUsername);
+
             GameMessage message = new GameMessage("MOVE");
             message.addData("gameId", gameId);
             message.addData("player", currentUsername);
             message.addData("move", new Move(row, col));
 
+            // Проверяем сериализацию Move
+            Move m = new Move(row, col);
+            System.out.println("Создан Move: row=" + m.getRow() + ", col=" + m.getCol());
+
             sendMessage(message);
+
         } catch (Exception e) {
             System.err.println("Ошибка при отправке хода: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

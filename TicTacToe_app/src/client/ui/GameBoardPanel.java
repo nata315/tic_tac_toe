@@ -106,18 +106,19 @@ public class GameBoardPanel extends JPanel {
 
     // метод для установки символов X\O
     public void setCell(int row, int col, String symbol) {
-        // проверка на валидность координат кнопок
         if (row < 0 || row >= 3 || col < 0 || col >= 3) return;
 
-        // текущая кнопка
         JButton cell = cells[row][col];
-
-        // установка символа
         cell.setText(symbol);
+        // НЕ отключаем клетку здесь! Пусть GameController управляет этим
+        // cell.setEnabled(false);  // УБЕРИТЕ ЭТУ СТРОКУ!
 
-        // делаем кнопку недоступной
-        cell.setEnabled(false);
-
+        // Можно добавить смену цвета для визуального отличия
+        if (symbol.equals("X")) {
+            cell.setForeground(new Color(41, 128, 185)); // Синий для X
+        } else if (symbol.equals("O")) {
+            cell.setForeground(new Color(231, 76, 60)); // Красный для O
+        }
     }
 
     // метод для очистки отдельной клетки
@@ -157,8 +158,9 @@ public class GameBoardPanel extends JPanel {
     public void enableBoard() {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
-                // доступными становятся лишь пустые клетки
-                cells[row][col].setEnabled(cells[row][col].getText().isEmpty());
+                JButton cell = cells[row][col];
+                // Включаем только пустые клетки
+                cell.setEnabled(cell.getText() == null || cell.getText().isEmpty());
             }
         }
     }
@@ -186,8 +188,8 @@ public class GameBoardPanel extends JPanel {
     }
 
     // метод, который возвращает кнопку по координатам
-    public JButton getCell(int row, int col) {
+    /*public JButton getCell(int row, int col) {
         if (row < 0 || row >= 3 || col < 0 || col >= 3) return null;
         return cells[row][col];
-    }
+    }*/
 }

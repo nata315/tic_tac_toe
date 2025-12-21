@@ -1,5 +1,3 @@
-//Управление игровыми сессиями
-
 package server;
 
 import shared.GameState;
@@ -7,12 +5,9 @@ import shared.Move;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GameManager {
-    // Хранение активных игр в ConcurrentHashMap
     private ConcurrentHashMap<String, GameSession> activeGames = new ConcurrentHashMap<>();
-    // ии соперник
     private AIPlayer aiPlayer = new AIPlayer();
 
-    // Внутренний класс для игровой сессии
     public static class GameSession {
         private String gameId;
         private String player1;
@@ -28,26 +23,24 @@ public class GameManager {
             this.isActive = true;
         }
 
-        // Проверка валидности хода
         public boolean isValidMove(Move move) {
             int row = move.getRow();
             int col = move.getCol();
-            char[][] board = gameState.getBoard();
+            String[][] board = gameState.getBoard();
 
             // Проверяем границы и пустую клетку
             return row >= 0 && row < 3 &&
                     col >= 0 && col < 3 &&
-                    board[row][col] == ' ';
+                    (board[row][col] == null || board[row][col].isEmpty());
         }
 
-        // Выполнение хода
         public void makeMove(Move move, String player) {
             if (!isValidMove(move)) {
                 throw new IllegalArgumentException("Invalid move");
             }
 
             // Определяем символ игрока
-            char symbol = player.equals(player1) ? 'X' : 'O';
+            String symbol = player.equals(player1) ? "X" : "O";
 
             // Обновляем доску
             gameState.makeMove(move.getRow(), move.getCol(), symbol);
@@ -60,24 +53,23 @@ public class GameManager {
             printBoard();
 
             // Меняем текущего игрока
-            char newPlayer = gameState.getCurrentPlayer() == 'X' ? 'O' : 'X';
-            gameState.setCurrentPlayer(newPlayer);
+            char newPlayerSymbol = gameState.getCurrentPlayer() == 'X' ? 'O' : 'X';
+            gameState.setCurrentPlayer(newPlayerSymbol);
 
             // Выводим информацию о следующем ходе
-            System.out.println("Следующий ход: " + newPlayer + " (" +
-                    (newPlayer == 'X' ? player1 : player2) + ")");
+            String nextPlayerName = newPlayerSymbol == 'X' ? player1 : player2;
+            System.out.println("Следующий ход: " + newPlayerSymbol + " (" + nextPlayerName + ")");
         }
 
-        // Вывод текущего состояния доски в консоль
         private void printBoard() {
-            char[][] board = gameState.getBoard();
+            String[][] board = gameState.getBoard();
             System.out.println("Текущее состояние доски:");
             System.out.println("  0 1 2");
             for (int i = 0; i < 3; i++) {
                 System.out.print(i + " ");
                 for (int j = 0; j < 3; j++) {
-                    char cell = board[i][j];
-                    if (cell == ' ') {
+                    String cell = board[i][j];
+                    if (cell == null || cell.isEmpty()) {
                         System.out.print("· ");
                     } else {
                         System.out.print(cell + " ");
@@ -88,14 +80,15 @@ public class GameManager {
             System.out.println();
         }
 
-        // Проверка победы
         public boolean checkWin(String player) {
-            char symbol = player.equals(player1) ? 'X' : 'O';
-            char[][] board = gameState.getBoard();
+            String symbol = player.equals(player1) ? "X" : "O";
+            String[][] board = gameState.getBoard();
 
             // Проверка строк
             for (int i = 0; i < 3; i++) {
-                if (board[i][0] == symbol && board[i][1] == symbol && board[i][2] == symbol) {
+                if (symbol.equals(board[i][0]) &&
+                        symbol.equals(board[i][1]) &&
+                        symbol.equals(board[i][2])) {
                     System.out.println("Игрок '" + player + "' выиграл по строке " + i + "!");
                     return true;
                 }
@@ -103,18 +96,24 @@ public class GameManager {
 
             // Проверка столбцов
             for (int i = 0; i < 3; i++) {
-                if (board[0][i] == symbol && board[1][i] == symbol && board[2][i] == symbol) {
+                if (symbol.equals(board[0][i]) &&
+                        symbol.equals(board[1][i]) &&
+                        symbol.equals(board[2][i])) {
                     System.out.println("Игрок '" + player + "' выиграл по столбцу " + i + "!");
                     return true;
                 }
             }
 
             // Проверка диагоналей
-            if (board[0][0] == symbol && board[1][1] == symbol && board[2][2] == symbol) {
+            if (symbol.equals(board[0][0]) &&
+                    symbol.equals(board[1][1]) &&
+                    symbol.equals(board[2][2])) {
                 System.out.println("Игрок '" + player + "' выиграл по главной диагонали!");
                 return true;
             }
-            if (board[0][2] == symbol && board[1][1] == symbol && board[2][0] == symbol) {
+            if (symbol.equals(board[0][2]) &&
+                    symbol.equals(board[1][1]) &&
+                    symbol.equals(board[2][0])) {
                 System.out.println("Игрок '" + player + "' выиграл по побочной диагонали!");
                 return true;
             }
@@ -122,12 +121,11 @@ public class GameManager {
             return false;
         }
 
-        // Проверка заполненности доски
         public boolean isBoardFull() {
-            char[][] board = gameState.getBoard();
+            String[][] board = gameState.getBoard();
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
-                    if (board[i][j] == ' ') {
+                    if (board[i][j] == null || board[i][j].isEmpty()) {
                         return false;
                     }
                 }
@@ -136,12 +134,11 @@ public class GameManager {
             return true;
         }
 
-        // Проверяем, является ли второй игрок ИИ
         public boolean isVsAI() {
             return "AI".equals(player2);
         }
 
-        // Геттеры и сеттеры
+        // Геттеры
         public String getGameId() { return gameId; }
         public GameState getGameState() { return gameState; }
         public boolean isActive() { return isActive; }
@@ -164,9 +161,10 @@ public class GameManager {
         }
 
         // Выводим информацию о начале обработки хода
-        System.out.println("\n=== Обработка хода ===");
+        System.out.println("\n=== СЕРВЕР: Обработка хода ===");
         System.out.println("Игра: " + gameId);
         System.out.println("Игрок: " + player);
+        System.out.println("Ход: [" + move.getRow() + "," + move.getCol() + "]");
 
         // Проверка возможности хода
         if (!session.isValidMove(move)) {
@@ -202,13 +200,12 @@ public class GameManager {
         return session.getGameState();
     }
 
-    // Ход ИИ соперника (только легкий уровень - случайные ходы)
     private void makeAIMove(GameSession session) {
         try {
             // Получаем текущее состояние доски
-            char[][] board = session.getGameState().getBoard();
+            String[][] board = session.getGameState().getBoard();
 
-            // Получаем случайный ход от ИИ (легкий уровень)
+            // Получаем ход от ИИ
             Move aiMove = aiPlayer.getRandomMove(board);
 
             // Если ИИ нашел ход и он валидный
@@ -234,38 +231,40 @@ public class GameManager {
 
         } catch (Exception e) {
             System.err.println("Ошибка при выполнении хода ИИ: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    // Создание новой игровой сессии (игрок против игрока)
     public GameSession createNewGame(String player1, String player2) {
         String gameId = generateGameId(player1);
         GameSession session = new GameSession(gameId, player1, player2);
         activeGames.put(gameId, session);
+
         System.out.println("\n=== Создана новая игра ===");
         System.out.println("ID игры: " + gameId);
         System.out.println("Игрок 1: " + player1 + " (X)");
         System.out.println("Игрок 2: " + player2 + " (O)");
         System.out.println("Первый ход: X (" + player1 + ")");
         System.out.println("======================\n");
+
         return session;
     }
 
-    // Создание игры против AI (только легкий уровень)
     public GameSession createGameWithAI(String player) {
         String gameId = generateGameId(player);
         GameSession session = new GameSession(gameId, player, "AI");
         activeGames.put(gameId, session);
+
         System.out.println("\n=== Создана игра против ИИ ===");
         System.out.println("ID игры: " + gameId);
         System.out.println("Игрок: " + player + " (X)");
         System.out.println("Соперник: ИИ (O) - легкий уровень");
         System.out.println("Первый ход: X (" + player + ")");
         System.out.println("===========================\n");
+
         return session;
     }
 
-    // Получение игровой сессии по ID
     public GameSession getGameSession(String gameId) {
         GameSession session = activeGames.get(gameId);
         if (session != null) {
@@ -275,13 +274,9 @@ public class GameManager {
         return session;
     }
 
-
-    // Генерация уникального ID игры
     private String generateGameId(String player) {
         String gameId = player + "_" + System.currentTimeMillis();
         System.out.println("Сгенерирован ID игры: " + gameId);
         return gameId;
     }
-
-
 }

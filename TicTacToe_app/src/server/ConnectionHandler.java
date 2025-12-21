@@ -8,6 +8,8 @@ import shared.Move;
 import shared.GameState;
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConnectionHandler implements Runnable {
     private Socket clientSocket;
@@ -86,25 +88,48 @@ public class ConnectionHandler implements Runnable {
     }
 
     private void handleMove(GameMessage message, ObjectOutputStream out) throws IOException {
+        System.out.println("\n=== СЕРВЕР: Получен MOVE ===");
+
         String gameId = (String) message.getData("gameId");
         String player = (String) message.getData("player");
-        Move move = (Move) message.getData("move");
+        Object moveObj = message.getData("move");
 
-        try {
-            GameState gameState = gameManager.processMove(gameId, move, player);
+        if (moveObj instanceof Move) {
+            Move move = (Move) moveObj;
 
-            GameMessage response = new GameMessage("MOVE_RESPONSE");
-            response.addData("success", true);
-            response.addData("gameState", gameState);
+            try {
+                GameState gameState = gameManager.processMove(gameId, move, player);
 
-            out.writeObject(response);
-            out.flush();
-        } catch (Exception e) {
-            GameMessage response = new GameMessage("ERROR");
-            response.addData("message", e.getMessage());
+                // Отправляем доску как List<String> для надежности
+                List<String> boardAsList = new ArrayList<>();
+                String[][] board = gameState.getBoard();
 
-            out.writeObject(response);
-            out.flush();
+                for (int i = 0; i < 3; i++) {
+                    for (int j = 0; j < 3; j++) {
+                        String cell = board[i][j];
+                        boardAsList.add(cell == null ? "" : cell);
+                    }
+                }
+
+                GameMessage response = new GameMessage("MOVE_RESPONSE");
+                response.addData("success", true);
+                response.addData("board", boardAsList);  // Отправляем как список
+                response.addData("currentPlayer", gameState.getCurrentPlayer());
+                response.addData("gameOver", gameState.isGameOver());
+                response.addData("winner", gameState.getWinner());
+
+                out.writeObject(response);
+                out.flush();
+
+            } catch (Exception e) {
+                System.err.println("СЕРВЕР: Ошибка обработки хода: " + e.getMessage());
+                e.printStackTrace();
+
+                GameMessage response = new GameMessage("ERROR");
+                response.addData("message", e.getMessage());
+                out.writeObject(response);
+                out.flush();
+            }
         }
     }
 

@@ -295,7 +295,7 @@ public class GameWindow extends JFrame {
     }
 
     // метод обновления статистики
-    public void setScoreInfo(int wins, int losses, int draws) {
+    /*public void setScoreInfo(int wins, int losses, int draws) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -305,7 +305,7 @@ public class GameWindow extends JFrame {
                 ));
             }
         });
-    }
+    }*/
 
     // метод отключения игрового поля
     public void disableBoard() {
