@@ -1,3 +1,6 @@
+//Логика ИИ-соперника
+
+
 package server;
 import shared.*;
 

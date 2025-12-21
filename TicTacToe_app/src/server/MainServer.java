@@ -1,3 +1,6 @@
+//Запуск сервера
+
+
 package server;
 
 import server.storage.GameStorage;

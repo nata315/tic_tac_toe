@@ -1,3 +1,6 @@
+//Управление игрой
+
+
 package client.controllers;
 
 import client.ClientNetwork;

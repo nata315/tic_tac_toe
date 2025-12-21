@@ -1,4 +1,8 @@
+//Состояние игры
+
+
 package shared;
+
 
 import java.io.Serializable;
 

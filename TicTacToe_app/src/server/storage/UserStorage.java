@@ -1,3 +1,6 @@
+//Работа с файлами пользователей
+
+
 package server.storage;
 // Сетевые возможности
 import java.net.*;           // ServerSocket, Socket

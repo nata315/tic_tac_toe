@@ -1,3 +1,5 @@
+//Основная логика сервера
+
 package server;
 
 import java.io.IOException;

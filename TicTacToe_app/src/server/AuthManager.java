@@ -1,3 +1,6 @@
+//Авторизация пользователей
+
+
 package server;
 
 import shared.User;

@@ -1,3 +1,6 @@
+//Управление окном входа
+
+
 package client.controllers;
 
 import client.ClientNetwork;

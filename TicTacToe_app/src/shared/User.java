@@ -1,3 +1,6 @@
+//Данные пользователя
+
+
 package shared;
 
 import java.io.Serializable;

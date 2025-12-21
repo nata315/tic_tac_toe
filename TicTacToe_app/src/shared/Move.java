@@ -1,4 +1,8 @@
+//ход игрока
+
+
 package shared;
+
 
 import java.io.Serializable;
 

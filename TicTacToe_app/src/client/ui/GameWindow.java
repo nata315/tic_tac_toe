@@ -1,5 +1,7 @@
-package client.ui;
+//Окно игры
 
+
+package client.ui;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;

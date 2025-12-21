@@ -1,3 +1,6 @@
+//Обработка подключения клиентов
+
+
 package server;
 
 import shared.GameMessage;

@@ -1,3 +1,6 @@
+//Сетевое подключение к серверу
+
+
 package client;
 
 import shared.*;

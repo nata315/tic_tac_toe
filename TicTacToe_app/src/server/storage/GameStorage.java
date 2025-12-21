@@ -1,3 +1,5 @@
+//Сохранение / загрузка игр
+
 package server.storage;
 
 import server.GameManager;

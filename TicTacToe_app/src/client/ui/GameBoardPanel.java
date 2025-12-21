@@ -1,3 +1,6 @@
+//Панель игрового поля
+
+
 package client.ui;
 
 import javax.swing.*;
@@ -56,6 +59,7 @@ public class GameBoardPanel extends JPanel {
                 cells[row][col] = cell;
                 // добавление кнопки на панель
                 add(cell);
+
             }
         }
     }
