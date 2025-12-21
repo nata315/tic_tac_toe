@@ -1,20 +1,27 @@
 package client.controllers;
+
 import client.ClientNetwork;
 import client.ui.GameWindow;
-import javax.swing.SwingUtilities;
+import shared.*;
+import javax.swing.*;
+import java.util.Timer;
+import java.util.TimerTask;
+
 
 public class GameController {
     private GameWindow gameFrame;
     private ClientNetwork clientNetwork;
     private Runnable onExit;
 
-    // Локальные переменные для тестирования
-    private String currentPlayer = "X";
-    private String[][] board = new String[3][3];
-    private boolean gameActive = true;
-    private int wins = 0;
-    private int losses = 0;
-    private int draws = 0;
+    // Данные игры
+    private String currentGameId;
+    private char playerSymbol = 'X';
+    private boolean myTurn = false;
+    private boolean gameActive = false;
+    private boolean vsAI = true; // По умолчанию играем с ИИ
+
+    private Timer gameStateTimer;
+    private int moveCount = 0;
 
     public GameController(GameWindow gameFrame, ClientNetwork clientNetwork) {
         this.gameFrame = gameFrame;
@@ -28,7 +35,7 @@ public class GameController {
 
             @Override
             public void onNewGame() {
-                startNewGame();
+                showNewGameDialog();
             }
 
             @Override
@@ -52,210 +59,353 @@ public class GameController {
             }
         });
 
-        // Начинаем новую игру
-        startNewGame();
+        // Инициализируем окно игры
+        gameFrame.setStatus("Подключение к серверу...");
+        gameFrame.disableBoard();
+    }
+
+    public void startNewGame(boolean vsAI) {
+        this.vsAI = vsAI;
+
+        if (!gameActive) {
+            clientNetwork.createNewGame(vsAI);
+            gameFrame.setStatus("Создание новой игры...");
+            gameFrame.disableBoard();
+        }
     }
 
     private void handleMove(int row, int col) {
-        if (!gameActive || board[row][col] != null) {
+        if (!gameActive || !myTurn || currentGameId == null) {
             return;
         }
 
-        // Локальная обработка хода (в реальной версии будет отправка на сервер)
-        board[row][col] = currentPlayer;
-        gameFrame.updateBoard(board);
-        clientNetwork.sendMove(row, col, currentPlayer);
-
-        // Проверка победы
-        if (checkWin(currentPlayer)) {
-            gameActive = false;
-            gameFrame.disableBoard();
-
-            if (currentPlayer.equals("X")) {
-                wins++;
-                gameFrame.setStatus("Победа! Вы выиграли!");
-            } else {
-                losses++;
-                gameFrame.setStatus("Поражение! Вы проиграли.");
-            }
-
-            gameFrame.setScoreInfo(wins, losses, draws);
-            highlightWinningLine();
+        // Локальная проверка (на всякий случай)
+        if (row < 0 || row > 2 || col < 0 || col > 2) {
+            gameFrame.setStatus("Неверные координаты");
             return;
         }
 
-        // Проверка ничьей
-        if (isBoardFull()) {
-            gameActive = false;
-            gameFrame.disableBoard();
-            draws++;
-            gameFrame.setStatus("Ничья!");
-            gameFrame.setScoreInfo(wins, losses, draws);
-            return;
-        }
-
-        // Смена игрока
-        currentPlayer = currentPlayer.equals("X") ? "O" : "X";
-        gameFrame.setPlayerInfo(currentPlayer);
-        gameFrame.setStatus("Ход игрока " + currentPlayer);
+        clientNetwork.sendMove(currentGameId, row, col);
+        gameFrame.setStatus("Ход отправлен на сервер...");
+        myTurn = false;
+        gameFrame.disableBoard();
+        moveCount++;
     }
 
-    private boolean checkWin(String player) {
-        // Проверка строк
-        for (int i = 0; i < 3; i++) {
-            if (player.equals(board[i][0]) &&
-                    player.equals(board[i][1]) &&
-                    player.equals(board[i][2])) {
-                return true;
-            }
+    private void showNewGameDialog() {
+        // Пока только против ИИ, так как сервер не поддерживает игру против игрока
+        String[] options = {"Против ИИ", "Отмена"};
+        int choice = JOptionPane.showOptionDialog(gameFrame,
+                "Выберите тип игры (пока доступно только против ИИ):",
+                "Новая игра",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]);
+
+        if (choice == 0) {
+            startNewGame(true);
         }
-
-        // Проверка столбцов
-        for (int i = 0; i < 3; i++) {
-            if (player.equals(board[0][i]) &&
-                    player.equals(board[1][i]) &&
-                    player.equals(board[2][i])) {
-                return true;
-            }
-        }
-
-        // Проверка диагоналей
-        if (player.equals(board[0][0]) &&
-                player.equals(board[1][1]) &&
-                player.equals(board[2][2])) {
-            return true;
-        }
-
-        if (player.equals(board[0][2]) &&
-                player.equals(board[1][1]) &&
-                player.equals(board[2][0])) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private int[][] getWinningLine(String player) {
-        // Проверка строк
-        for (int i = 0; i < 3; i++) {
-            if (player.equals(board[i][0]) &&
-                    player.equals(board[i][1]) &&
-                    player.equals(board[i][2])) {
-                return new int[][]{{i, 0}, {i, 1}, {i, 2}};
-            }
-        }
-
-        // Проверка столбцов
-        for (int i = 0; i < 3; i++) {
-            if (player.equals(board[0][i]) &&
-                    player.equals(board[1][i]) &&
-                    player.equals(board[2][i])) {
-                return new int[][]{{0, i}, {1, i}, {2, i}};
-            }
-        }
-
-        // Проверка диагоналей
-        if (player.equals(board[0][0]) &&
-                player.equals(board[1][1]) &&
-                player.equals(board[2][2])) {
-            return new int[][]{{0, 0}, {1, 1}, {2, 2}};
-        }
-
-        if (player.equals(board[0][2]) &&
-                player.equals(board[1][1]) &&
-                player.equals(board[2][0])) {
-            return new int[][]{{0, 2}, {1, 1}, {2, 0}};
-        }
-
-        return null;
-    }
-
-    private boolean isBoardFull() {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (board[i][j] == null) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private void highlightWinningLine() {
-        int[][] winningLine = getWinningLine(currentPlayer);
-        if (winningLine != null) {
-            gameFrame.highlightWinningLine(winningLine);
-        }
-    }
-
-    private void startNewGame() {
-        board = new String[3][3];
-        currentPlayer = "X";
-        gameActive = true;
-
-        gameFrame.clearBoard();
-        gameFrame.enableBoard();
-        gameFrame.setPlayerInfo(currentPlayer);
-        gameFrame.setStatus("Новая игра! Ход игрока " + currentPlayer);
-
-        System.out.println("Начата новая игра");
     }
 
     private void surrenderGame() {
-        if (!gameActive) return;
+        if (gameActive) {
+            int confirm = JOptionPane.showConfirmDialog(gameFrame,
+                    "Вы уверены, что хотите сдаться?\nТекущая игра будет завершена.",
+                    "Подтверждение сдачи",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
 
-        gameActive = false;
-        losses++;
-        gameFrame.disableBoard();
-        gameFrame.setStatus("Вы сдались!");
-        gameFrame.setScoreInfo(wins, losses, draws);
-
-        System.out.println("Игрок сдался");
+            if (confirm == JOptionPane.YES_OPTION) {
+                endGame("Вы сдались!");
+            }
+        }
     }
 
-    private void exitGame() {
-        clientNetwork.disconnect();
+    public void exitGame() {
+        endGame("Выход из игры");
         gameFrame.hideWindow();
 
         if (onExit != null) {
             onExit.run();
         }
+    }
 
-        System.out.println("Выход из игры");
+    private void endGame(String message) {
+        gameActive = false;
+        stopGameStatePolling();
+        gameFrame.disableBoard();
+        gameFrame.setStatus(message);
+        currentGameId = null;
+        moveCount = 0;
     }
 
     private void saveGame() {
-        // В реальной версии будет отправка запроса на сохранение
-        gameFrame.setStatus("Сохранение игры...");
-        System.out.println("Запрос на сохранение игры");
-
-        // Имитация сохранения
-        SwingUtilities.invokeLater(() -> {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            gameFrame.showInfoDialog("Сохранение", "Игра успешно сохранена!");
-            gameFrame.setStatus("Игра сохранена");
-        });
+        if (gameActive && currentGameId != null) {
+            gameFrame.showInfoDialog("Информация",
+                    "Игра автоматически сохраняется на сервере.\n" +
+                            "ID игры: " + currentGameId);
+        } else {
+            gameFrame.showInfoDialog("Информация", "Нет активной игры для сохранения");
+        }
     }
 
     private void loadGame() {
-        // В реальной версии будет отправка запроса на загрузку
-        gameFrame.setStatus("Загрузка игры...");
-        System.out.println("Запрос на загрузку игры");
+        gameFrame.showInfoDialog("Функция в разработке",
+                "Загрузка игр будет доступна в будущих версиях.\n" +
+                        "Пожалуйста, создайте новую игру.");
+    }
 
-        // Имитация загрузки
+    public void handleServerMessage(GameMessage message) {
         SwingUtilities.invokeLater(() -> {
+            String type = message.getType();
+            System.out.println("Получено сообщение типа: " + type);
+
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
+                switch (type) {
+                    case "NEW_GAME_RESPONSE":
+                        handleNewGameResponse(message);
+                        break;
+
+                    case "MOVE_RESPONSE":
+                        handleMoveResponse(message);
+                        break;
+
+                    case "GAME_STATE_RESPONSE":
+                        handleGameStateResponse(message);
+                        break;
+
+                    case "LOGIN_RESPONSE":
+                    case "REGISTER_RESPONSE":
+                        // Эти сообщения обрабатываются LoginController
+                        break;
+
+                    case "ERROR":
+                        handleError(message);
+                        break;
+
+                    default:
+                        System.out.println("Неизвестный тип сообщения: " + type);
+                }
+            } catch (Exception e) {
+                System.err.println("Ошибка обработки сообщения: " + e.getMessage());
                 e.printStackTrace();
+                gameFrame.showErrorDialog("Ошибка",
+                        "Ошибка обработки ответа сервера: " + e.getMessage());
             }
-            gameFrame.showInfoDialog("Загрузка", "Игра успешно загружена!");
-            startNewGame();
         });
+    }
+
+    private void handleNewGameResponse(GameMessage message) {
+        try {
+            currentGameId = (String) message.getData("gameId");
+            GameState gameState = (GameState) message.getData("gameState");
+            String player2 = (String) message.getData("player2");
+
+            if (currentGameId == null || gameState == null) {
+                throw new IllegalArgumentException("Некорректный ответ от сервера");
+            }
+
+            // Определяем наш символ
+            String username = clientNetwork.getCurrentUsername();
+            playerSymbol = username.equals(player2) ? 'O' : 'X';
+
+            // Обновляем интерфейс
+            updateGameState(gameState);
+            gameActive = true;
+            moveCount = 0;
+
+            // Определяем, наш ли сейчас ход
+            myTurn = (gameState.getCurrentPlayer() == playerSymbol);
+
+            if (myTurn) {
+                gameFrame.setStatus("Ваш ход! Вы играете за " + playerSymbol);
+                gameFrame.enableBoard();
+            } else {
+                gameFrame.setStatus("Ожидание хода противника...");
+                gameFrame.disableBoard();
+                // Если игра против ИИ, и ИИ ходит первым - запускаем polling
+                if (vsAI && "AI".equals(player2)) {
+                    startGameStatePolling();
+                }
+            }
+
+            gameFrame.setPlayerInfo(String.valueOf(playerSymbol));
+
+            // Показываем информацию об игре
+            String opponentInfo = "AI".equals(player2) ? "Искусственный интеллект" : player2;
+            gameFrame.showInfoDialog("Игра началась",
+                    "ID игры: " + currentGameId +
+                            "\nВы играете за: " + playerSymbol +
+                            "\nПротив: " + opponentInfo +
+                            "\n\nПримечание: Сервер пока не реализует автоматический ход ИИ." +
+                            "\nПосле вашего хода игра может не продолжаться.");
+
+        } catch (Exception e) {
+            gameFrame.showErrorDialog("Ошибка создания игры",
+                    "Не удалось создать игру: " + e.getMessage());
+            gameActive = false;
+        }
+    }
+
+    private void handleMoveResponse(GameMessage message) {
+        try {
+            Boolean success = (Boolean) message.getData("success");
+
+            if (success != null && success) {
+                GameState gameState = (GameState) message.getData("gameState");
+
+                if (gameState != null) {
+                    updateGameState(gameState);
+
+                    // Проверяем окончание игры
+                    if (gameState.isGameOver()) {
+                        String winner = gameState.getWinner();
+                        if ("DRAW".equals(winner)) {
+                            endGame("Ничья!");
+                        } else if (winner != null && winner.equals(clientNetwork.getCurrentUsername())) {
+                            endGame("Поздравляем! Вы победили!");
+                        } else {
+                            endGame("Игра окончена. Вы проиграли.");
+                        }
+                    } else {
+                        // Обновляем, чей сейчас ход
+                        myTurn = (gameState.getCurrentPlayer() == playerSymbol);
+
+                        if (myTurn) {
+                            gameFrame.setStatus("Ваш ход!");
+                            gameFrame.enableBoard();
+                        } else {
+                            gameFrame.setStatus("Ход противника...");
+                            gameFrame.disableBoard();
+
+                            // Если игра против ИИ, запускаем polling для получения хода ИИ
+                            if (vsAI) {
+                                startGameStatePolling();
+                            }
+                        }
+                    }
+                }
+            } else {
+                String errorMsg = "Неизвестная ошибка";
+                if (message.hasData("message")) {
+                    errorMsg = (String) message.getData("message");
+                }
+
+                gameFrame.showErrorDialog("Ошибка хода", errorMsg);
+                myTurn = true; // Возвращаем ход
+                gameFrame.enableBoard();
+            }
+
+        } catch (Exception e) {
+            gameFrame.showErrorDialog("Ошибка обработки хода",
+                    "Ошибка: " + e.getMessage());
+            myTurn = true;
+            gameFrame.enableBoard();
+        }
+    }
+
+    private void handleGameStateResponse(GameMessage message) {
+        try {
+            GameState gameState = (GameState) message.getData("gameState");
+            Boolean gameOver = (Boolean) message.getData("gameOver");
+
+            if (gameState != null) {
+                updateGameState(gameState);
+
+                if (gameOver != null && gameOver) {
+                    String winner = (String) message.getData("winner");
+                    if ("DRAW".equals(winner)) {
+                        endGame("Ничья!");
+                    } else if (winner != null && winner.equals(clientNetwork.getCurrentUsername())) {
+                        endGame("Поздравляем! Вы победили!");
+                    } else {
+                        endGame("Игра окончена. Вы проиграли.");
+                    }
+                } else {
+                    // Обновляем статус хода
+                    myTurn = (gameState.getCurrentPlayer() == playerSymbol);
+
+                    if (myTurn) {
+                        stopGameStatePolling(); // Больше не нужно опрашивать
+                        gameFrame.setStatus("Ваш ход!");
+                        gameFrame.enableBoard();
+                    } else {
+                        gameFrame.setStatus("Ход противника...");
+                        gameFrame.disableBoard();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка обработки состояния игры: " + e.getMessage());
+        }
+    }
+
+    private void handleError(GameMessage message) {
+        String error = "Неизвестная ошибка";
+        if (message.hasData("message")) {
+            error = (String) message.getData("message");
+        }
+
+        gameFrame.setStatus("Ошибка: " + error);
+        gameFrame.showErrorDialog("Ошибка сервера", error);
+
+        // Если ошибка связана с игрой, завершаем ее
+        if (gameActive) {
+            endGame("Игра прервана из-за ошибки сервера");
+        }
+    }
+
+    private void updateGameState(GameState gameState) {
+        try {
+            char[][] board = gameState.getBoard();
+            String[][] displayBoard = new String[3][3];
+
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    char cell = board[i][j];
+                    if (cell == 'X' || cell == 'O') {
+                        displayBoard[i][j] = String.valueOf(cell);
+                    } else {
+                        displayBoard[i][j] = null;
+                    }
+                }
+            }
+
+            gameFrame.updateBoard(displayBoard);
+
+        } catch (Exception e) {
+            System.err.println("Ошибка обновления игрового поля: " + e.getMessage());
+        }
+    }
+
+    private void startGameStatePolling() {
+        stopGameStatePolling(); // Останавливаем предыдущий таймер
+
+        if (!gameActive || currentGameId == null) {
+            return;
+        }
+
+        gameStateTimer = new Timer(true);
+        gameStateTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                if (gameActive && currentGameId != null && !myTurn) {
+                    System.out.println("Опрашиваем состояние игры: " + currentGameId);
+                    clientNetwork.getGameState(currentGameId);
+                } else {
+                    stopGameStatePolling();
+                }
+            }
+        }, 1000, 2000); // Начинаем через 1 сек, повторяем каждые 2 сек
+    }
+
+    private void stopGameStatePolling() {
+        if (gameStateTimer != null) {
+            gameStateTimer.cancel();
+            gameStateTimer = null;
+        }
     }
 
     public void setOnExit(Runnable onExit) {
@@ -268,5 +418,11 @@ public class GameController {
 
     public void hideGameWindow() {
         gameFrame.hideWindow();
+    }
+
+    public void reset() {
+        endGame("Игра сброшена");
+        gameFrame.clearBoard();
+        gameFrame.setStatus("Готов к новой игре");
     }
 }

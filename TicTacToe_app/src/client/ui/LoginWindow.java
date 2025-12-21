@@ -248,22 +248,27 @@ public class LoginWindow extends JFrame {
         }
     }
 
-    // метод установки иконки (в доработке)
+    // метод установки иконки
     private void setupWindow() {
-        ImageIcon icon = createImageIcon("/icon");
-        if (icon != null) {
-            setIconImage(icon.getImage());
-        }
-    }
+        try {
+            // Поиск иконки через ClassLoader. getClass() - метод, с помощью которого получаем класс
+            // текущего объекта. getClassLoader() - метод представляет собой загрузчик ресурсов, который знает,
+            // что и где искать. getResource() - метод ищет файл по указанному пути.
+            java.net.URL iconURL = getClass().getClassLoader().getResource("client/resources/icon.jpg");
 
-    // метод создания иконки (в доработке)
-    private ImageIcon createImageIcon(String path) {
-        java.net.URL imgURL = getClass().getResource(path);
-        if (imgURL != null) {
-            return new ImageIcon(imgURL);
-        } else {
-            System.err.println("Не удалось загрузить иконку: " + path);
-            return null;
+            // если иконка была найдена
+            if (iconURL != null) {
+                // переменная, которая хранит ссылку на иконку
+                ImageIcon icon = new ImageIcon(iconURL);
+                // setIconImage() устанавливает иконку в заголовок окна.
+                // getImage() получает объект Image из ImageIcon
+                setIconImage(icon.getImage());
+                System.out.println("Иконка успешно загружена: " + iconURL);
+            } else {
+                System.out.println("Иконка не найдена. Используется стандартная иконка.");
+            }
+        } catch (Exception e) {
+            System.out.println("Ошибка загрузки иконки: " + e.getMessage());
         }
     }
 
