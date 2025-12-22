@@ -2,18 +2,30 @@ package server;
 
 import shared.GameState;
 import shared.Move;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GameManager {
     private ConcurrentHashMap<String, GameSession> activeGames = new ConcurrentHashMap<>();
     private AIPlayer aiPlayer = new AIPlayer();
 
-    public static class GameSession {
+    public ConcurrentHashMap<String, GameSession> getActiveGames() {
+        return activeGames;
+    }
+
+    public static class GameSession implements Serializable {
+        private static final long serialVersionUID = 1L;
+
         private String gameId;
         private String player1;
         private String player2;
         private GameState gameState;
         private boolean isActive;
+
 
         public GameSession(String gameId, String player1, String player2) {
             this.gameId = gameId;
@@ -150,6 +162,7 @@ public class GameManager {
         }
         public String getPlayer1() { return player1; }
         public String getPlayer2() { return player2; }
+
     }
 
     public GameState processMove(String gameId, Move move, String player) {
@@ -236,18 +249,64 @@ public class GameManager {
     }
 
     public GameSession createNewGame(String player1, String player2) {
-        String gameId = generateGameId(player1);
+        // ВАЖНО: Генерируем УНИКАЛЬНЫЙ ID для каждой новой игры
+        String gameId = player1 + "_" + System.currentTimeMillis() + "_" +
+                (int)(Math.random() * 1000);
+
+        // Удаляем старые игры этого игрока (чтобы не накапливались)
+        cleanupOldGames(player1);
+
+        System.out.println("\n=== Создание НОВОЙ игры ===");
+        System.out.println("Старые игры игрока " + player1 + ": " +
+                activeGames.values().stream()
+                        .filter(s -> s.getPlayer1().equals(player1) ||
+                                s.getPlayer2().equals(player1))
+                        .count());
+
+        // Создаем новую сессию с ПУСТОЙ доской
         GameSession session = new GameSession(gameId, player1, player2);
+
+        // Убеждаемся, что доска ПУСТАЯ
+        String[][] board = session.getGameState().getBoard();
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                board[i][j] = null; // Явно устанавливаем null
+            }
+        }
+
+        // Явно устанавливаем начальные значения
+        session.getGameState().setCurrentPlayer('X');
+        session.getGameState().setGameOver(false);
+        session.getGameState().setWinner(null);
+
+        // Добавляем в активные игры (старая с таким же ID будет перезаписана)
         activeGames.put(gameId, session);
 
-        System.out.println("\n=== Создана новая игра ===");
-        System.out.println("ID игры: " + gameId);
+        System.out.println("Новый GameID: " + gameId);
         System.out.println("Игрок 1: " + player1 + " (X)");
         System.out.println("Игрок 2: " + player2 + " (O)");
-        System.out.println("Первый ход: X (" + player1 + ")");
-        System.out.println("======================\n");
+        System.out.println("Доска пустая: ДА");
+        System.out.println("Активных игр всего: " + activeGames.size());
+        System.out.println("===========================\n");
 
         return session;
+    }
+
+    private void cleanupOldGames(String player) {
+        // Удаляем старые ЗАВЕРШЕННЫЕ игры этого игрока
+        List<String> toRemove = new ArrayList<>();
+        for (Map.Entry<String, GameSession> entry : activeGames.entrySet()) {
+            GameSession session = entry.getValue();
+            if ((session.getPlayer1().equals(player) || session.getPlayer2().equals(player))
+                    && !session.isActive()) {
+                toRemove.add(entry.getKey());
+            }
+        }
+
+        for (String gameId : toRemove) {
+            activeGames.remove(gameId);
+            System.out.println("Удалена завершенная игра: " + gameId);
+        }
     }
 
     public GameSession createGameWithAI(String player) {

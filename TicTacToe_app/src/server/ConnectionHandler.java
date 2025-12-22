@@ -10,6 +10,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import server.storage.*;
 
 public class ConnectionHandler implements Runnable {
     private Socket clientSocket;
@@ -45,6 +46,15 @@ public class ConnectionHandler implements Runnable {
                         break;
                     case "GET_GAME_STATE":
                         handleGetGameState(message, out);
+                        break;
+                    case "SAVE_GAME":
+                        handleSaveGame(message, out);
+                        break;
+                    case "LOAD_GAME":
+                        handleLoadGame(message, out);
+                        break;
+                    case "GET_SAVED_GAMES":
+                        handleGetSavedGames(message, out);
                         break;
                     default:
                         System.out.println("Неизвестный тип сообщения: " + message.getType());
@@ -172,5 +182,89 @@ public class ConnectionHandler implements Runnable {
             out.writeObject(response);
             out.flush();
         }
+    }
+
+    // Добавьте новые методы:
+
+    private void handleSaveGame(GameMessage message, ObjectOutputStream out) throws IOException {
+        String gameId = (String) message.getData("gameId");
+        String player = (String) message.getData("player");
+
+        try {
+            GameManager.GameSession session = gameManager.getGameSession(gameId);
+
+            if (session != null) {
+                // Сохраняем игру через GameStorage
+                GameStorage storage = new GameStorage();
+                storage.saveGame(session, player);
+
+                GameMessage response = new GameMessage("SAVE_GAME_RESPONSE");
+                response.addData("success", true);
+                response.addData("gameId", gameId);
+
+                out.writeObject(response);
+            } else {
+                throw new Exception("Игра не найдена");
+            }
+        } catch (Exception e) {
+            GameMessage response = new GameMessage("SAVE_GAME_RESPONSE");
+            response.addData("success", false);
+            response.addData("message", e.getMessage());
+
+            out.writeObject(response);
+        }
+        out.flush();
+    }
+
+    private void handleLoadGame(GameMessage message, ObjectOutputStream out) throws IOException {
+        String gameId = (String) message.getData("gameId");
+        String player = (String) message.getData("player");
+
+        try {
+            GameStorage storage = new GameStorage();
+            GameManager.GameSession session = storage.loadGame(gameId, player);
+
+            if (session != null) {
+                // Добавляем сессию обратно в активные игры
+                gameManager.getActiveGames().put(gameId, session);
+
+                GameMessage response = new GameMessage("LOAD_GAME_RESPONSE");
+                response.addData("success", true);
+                response.addData("gameId", gameId);
+                response.addData("gameState", session.getGameState());
+                response.addData("player2", session.getPlayer2());
+
+                out.writeObject(response);
+            } else {
+                throw new Exception("Сохраненная игра не найдена");
+            }
+        } catch (Exception e) {
+            GameMessage response = new GameMessage("LOAD_GAME_RESPONSE");
+            response.addData("success", false);
+            response.addData("message", e.getMessage());
+
+            out.writeObject(response);
+        }
+        out.flush();
+    }
+
+    private void handleGetSavedGames(GameMessage message, ObjectOutputStream out) throws IOException {
+        String player = (String) message.getData("player");
+
+        try {
+            GameStorage storage = new GameStorage();
+            List<String> gameIds = storage.getUserSavedGames(player);
+
+            GameMessage response = new GameMessage("GET_SAVED_GAMES_RESPONSE");
+            response.addData("gameIds", gameIds);
+
+            out.writeObject(response);
+        } catch (Exception e) {
+            GameMessage response = new GameMessage("ERROR");
+            response.addData("message", "Ошибка получения списка игр: " + e.getMessage());
+
+            out.writeObject(response);
+        }
+        out.flush();
     }
 }

@@ -8,6 +8,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.List;
 import java.util.ArrayList;
+import server.storage.GameStorage;
 
 public class GameController {
     private GameWindow gameFrame;
@@ -23,6 +24,14 @@ public class GameController {
 
     private Timer gameStateTimer;
     private int moveCount = 0;
+
+    // Счетчик итогов игры
+    private int wins = 0;
+    private int losses = 0;
+    private int draws = 0;
+
+    private boolean isSavedGame = false;
+    private List<String> savedGameIds = new ArrayList<>();
 
     public GameController(GameWindow gameFrame, ClientNetwork clientNetwork) {
         this.gameFrame = gameFrame;
@@ -63,16 +72,39 @@ public class GameController {
         // Инициализируем окно игры
         gameFrame.setStatus("Подключение к серверу...");
         gameFrame.disableBoard();
+
+        // Инициализируем статистику в UI
+        updateScoreDisplay();
     }
 
     public void startNewGame(boolean vsAI) {
-        this.vsAI = vsAI;
-
-        if (!gameActive) {
-            clientNetwork.createNewGame(vsAI);
-            gameFrame.setStatus("Создание новой игры...");
-            gameFrame.disableBoard();
+        // Завершаем текущую игру на КЛИЕНТЕ
+        if (gameActive && currentGameId != null) {
+            endGame("Завершено для новой игры");
         }
+
+        // Сбрасываем состояние
+        resetLocalState();
+
+        this.vsAI = vsAI;
+        this.isSavedGame = false;
+
+        // Очищаем UI
+        gameFrame.clearBoard();
+        gameFrame.setStatus("Создание новой игры...");
+        gameFrame.disableBoard();
+
+        // Запрашиваем у сервера СОВЕРШЕННО НОВУЮ игру
+        clientNetwork.createNewGame(vsAI);
+    }
+
+    private void resetLocalState() {
+        stopGameStatePolling();
+        currentGameId = null;
+        playerSymbol = 'X';
+        myTurn = false;
+        gameActive = false;
+        moveCount = 0;
     }
 
     private void handleMove(int row, int col) {
@@ -110,9 +142,9 @@ public class GameController {
     }
 
     private void showNewGameDialog() {
-        String[] options = {"Против ИИ", "Отмена"};
+        String[] options = {"Да", "Нет"};
         int choice = JOptionPane.showOptionDialog(gameFrame,
-                "Выберите тип игры:",
+                "Начать новую игру:",
                 "Новая игра",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE,
@@ -152,6 +184,7 @@ public class GameController {
         gameActive = false;
         stopGameStatePolling();
         gameFrame.disableBoard();
+        gameFrame.clearBoard();
         gameFrame.setStatus(message);
         currentGameId = null;
         moveCount = 0;
@@ -159,18 +192,49 @@ public class GameController {
 
     private void saveGame() {
         if (gameActive && currentGameId != null) {
+            // Здесь только показ диалога, но нет вызова сохранения!
             gameFrame.showInfoDialog("Информация",
                     "Игра автоматически сохраняется на сервере.\n" +
                             "ID игры: " + currentGameId);
+
+            // ДОБАВЬТЕ ЭТУ СТРОЧКУ:
+            clientNetwork.saveGame(currentGameId);
+
         } else {
             gameFrame.showInfoDialog("Информация", "Нет активной игры для сохранения");
         }
     }
 
     private void loadGame() {
-        gameFrame.showInfoDialog("Функция в разработке",
-                "Загрузка игр будет доступна в будущих версиях.\n" +
-                        "Пожалуйста, создайте новую игру.");
+        // Запрашиваем список сохраненных игр у сервера
+        clientNetwork.getSavedGames();
+        gameFrame.setStatus("Загрузка списка сохраненных игр...");
+    }
+
+    public void showLoadGameDialog(List<String> gameIds) {
+        if (gameIds == null || gameIds.isEmpty()) {
+            gameFrame.showInfoDialog("Нет сохраненных игр",
+                    "У вас нет сохраненных игр. Начните новую игру!");
+            return;
+        }
+
+        // Создаем диалог выбора игры
+        String[] options = gameIds.toArray(new String[0]);
+        String selectedGame = (String) JOptionPane.showInputDialog(
+                gameFrame,
+                "Выберите игру для загрузки:",
+                "Загрузка игры",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
+        if (selectedGame != null) {
+            isSavedGame = true;
+            clientNetwork.loadSavedGame(selectedGame);
+            gameFrame.setStatus("Загрузка игры " + selectedGame + "...");
+        }
     }
 
     public void handleServerMessage(GameMessage message) {
@@ -190,6 +254,18 @@ public class GameController {
 
                     case "GAME_STATE_RESPONSE":
                         handleGameStateResponse(message);
+                        break;
+
+                    case "SAVE_GAME_RESPONSE":
+                        handleSaveGameResponse(message);
+                        break;
+
+                    case "LOAD_GAME_RESPONSE":
+                        handleLoadGameResponse(message);
+                        break;
+
+                    case "GET_SAVED_GAMES_RESPONSE":
+                        handleGetSavedGamesResponse(message);
                         break;
 
                     case "LOGIN_RESPONSE":
@@ -414,12 +490,23 @@ public class GameController {
         if (gameState.isGameOver()) {
             String winner = gameState.getWinner();
             if ("DRAW".equals(winner)) {
+                draws++;
                 endGame("Ничья!");
+                gameFrame.showInfoDialog("Ничья!",
+                        "Нет победителя.");
             } else if (winner != null && winner.equals(clientNetwork.getCurrentUsername())) {
+                wins++;
                 endGame("Поздравляем! Вы победили!");
+                gameFrame.showInfoDialog("Поздравляем!",
+                        "Вы победили!");
             } else {
+                losses++;
                 endGame("Игра окончена. Вы проиграли.");
+                gameFrame.showInfoDialog("Игра окончена.",
+                        "Вы проиграли!");
             }
+
+            updateScoreDisplay();
         } else {
             // Обновляем, чей сейчас ход
             myTurn = (gameState.getCurrentPlayer() == playerSymbol);
@@ -440,6 +527,10 @@ public class GameController {
                 }
             }
         }
+    }
+
+    private void updateScoreDisplay() {
+        gameFrame.setScoreInfo(wins, losses, draws);
     }
 
     private void handleGameStateResponse(GameMessage message) {
@@ -605,6 +696,78 @@ public class GameController {
 
         gameFrame.updateBoard(testBoard);
         gameFrame.setStatus("Тест UI - символы должны отображаться!");
-        System.out.println("Тестовые символы отправлены в UI");
+        System.out.println("Тестовые символы отправлены");
+    }
+
+    // Добавьте новые методы обработки:
+    private void handleSaveGameResponse(GameMessage message) {
+        Boolean success = (Boolean) message.getData("success");
+        if (success != null && success) {
+            String gameId = (String) message.getData("gameId");
+            gameFrame.showInfoDialog("Сохранение игры",
+                    "Игра успешно сохранена!\nID игры: " + gameId);
+        } else {
+            String error = (String) message.getData("message");
+            gameFrame.showErrorDialog("Ошибка сохранения",
+                    "Не удалось сохранить игру: " + error);
+        }
+    }
+
+    private void handleLoadGameResponse(GameMessage message) {
+        Boolean success = (Boolean) message.getData("success");
+
+        if (success != null && success) {
+            currentGameId = (String) message.getData("gameId");
+            Object gameStateObj = message.getData("gameState");
+            String player2 = (String) message.getData("player2");
+
+            // Обновляем состояние игры
+            if (gameStateObj instanceof GameState) {
+                GameState gameState = (GameState) gameStateObj;
+
+                // Определяем наш символ
+                String username = clientNetwork.getCurrentUsername();
+                playerSymbol = username.equals(player2) ? 'O' : 'X';
+
+                // Обновляем UI
+                updateGameState(gameState);
+                gameFrame.setPlayerInfo(String.valueOf(playerSymbol));
+
+                gameActive = true;
+                isSavedGame = true;
+
+                // Определяем, чей сейчас ход
+                myTurn = (gameState.getCurrentPlayer() == playerSymbol);
+
+                if (myTurn) {
+                    gameFrame.setStatus("Ваш ход! (Загруженная игра)");
+                    gameFrame.enableBoard();
+                } else {
+                    gameFrame.setStatus("Ход противника... (Загруженная игра)");
+                    gameFrame.disableBoard();
+                }
+
+                gameFrame.showInfoDialog("Игра загружена",
+                        "Игра успешно загружена!\nID: " + currentGameId +
+                                "\nВы играете за: " + playerSymbol);
+            }
+        } else {
+            String error = (String) message.getData("message");
+            gameFrame.showErrorDialog("Ошибка загрузки",
+                    "Не удалось загрузить игру: " + error);
+        }
+    }
+
+    private void handleGetSavedGamesResponse(GameMessage message) {
+        @SuppressWarnings("unchecked")
+        List<String> gameIds = (List<String>) message.getData("gameIds");
+
+        if (gameIds != null) {
+            this.savedGameIds = gameIds;
+            showLoadGameDialog(gameIds);
+        } else {
+            gameFrame.showInfoDialog("Нет сохраненных игр",
+                    "У вас нет сохраненных игр.");
+        }
     }
 }

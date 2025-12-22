@@ -190,6 +190,43 @@ public class ClientNetwork {
         System.out.println("Отключено от сервера");
     }
 
+    // Добавьте новые методы:
+
+    public void saveGame(String gameId) {
+        try {
+            GameMessage message = new GameMessage("SAVE_GAME");
+            message.addData("gameId", gameId);
+            message.addData("player", currentUsername);
+
+            sendMessage(message);
+        } catch (Exception e) {
+            System.err.println("Ошибка при сохранении игры: " + e.getMessage());
+        }
+    }
+
+    public void loadSavedGame(String gameId) {
+        try {
+            GameMessage message = new GameMessage("LOAD_GAME");
+            message.addData("gameId", gameId);
+            message.addData("player", currentUsername);
+
+            sendMessage(message);
+        } catch (Exception e) {
+            System.err.println("Ошибка при загрузке игры: " + e.getMessage());
+        }
+    }
+
+    public void getSavedGames() {
+        try {
+            GameMessage message = new GameMessage("GET_SAVED_GAMES");
+            message.addData("player", currentUsername);
+
+            sendMessage(message);
+        } catch (Exception e) {
+            System.err.println("Ошибка при получении списка игр: " + e.getMessage());
+        }
+    }
+
     public boolean isConnected() {
         return connected && socket != null && !socket.isClosed();
     }
