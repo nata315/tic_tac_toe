@@ -68,7 +68,4 @@ public class AuthManager {
         }
     }
 
-    public User getUser(String username) {
-        return users.get(username);
-    }
 }

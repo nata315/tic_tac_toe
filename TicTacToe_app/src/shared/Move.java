@@ -3,7 +3,6 @@
 
 package shared;
 
-
 import java.io.Serializable;
 
 public class Move implements Serializable {
@@ -23,16 +22,8 @@ public class Move implements Serializable {
         return row;
     }
 
-    public void setRow(int row) {
-        this.row = row;
-    }
-
     public int getCol() {
         return col;
-    }
-
-    public void setCol(int col) {
-        this.col = col;
     }
 
     @Override

@@ -1,6 +1,4 @@
 //Управление окном входа
-
-
 package client.controllers;
 
 import client.ClientNetwork;
@@ -122,7 +120,7 @@ public class LoginController {
 
                     if (success != null && success) {
                         // После успешной регистрации очищаем поля
-                        loginFrame.clearFields();
+                        //loginFrame.clearFields();
                     }
                 }
                 else if ("ERROR".equals(type)) {

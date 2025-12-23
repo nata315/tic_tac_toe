@@ -1,6 +1,5 @@
 //Данные пользователя
 
-
 package shared;
 
 import java.io.Serializable;
@@ -22,7 +21,4 @@ public class User implements Serializable {
         return password;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
 }

@@ -294,19 +294,6 @@ public class GameWindow extends JFrame {
         });
     }
 
-    // метод обновления статистики
-    /*public void setScoreInfo(int wins, int losses, int draws) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                scoreLabel.setText(String.format(
-                        "Побед: %d | Поражений: %d | Ничьих: %d",
-                        wins, losses, draws
-                ));
-            }
-        });
-    }*/
-
     // метод отключения игрового поля
     public void disableBoard() {
         gameBoard.disableBoard();

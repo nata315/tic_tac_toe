@@ -57,12 +57,6 @@ public class GameManager {
             // Обновляем доску
             gameState.makeMove(move.getRow(), move.getCol(), symbol);
 
-            // Выводим информацию о ходе в консоль
-            System.out.println("Игрок '" + player + "' поставил '" + symbol +
-                    "' на клетку [" + move.getRow() + "," + move.getCol() + "]");
-
-            // Выводим текущее состояние доски
-            printBoard();
 
             // Меняем текущего игрока
             char newPlayerSymbol = gameState.getCurrentPlayer() == 'X' ? 'O' : 'X';
@@ -73,24 +67,6 @@ public class GameManager {
             System.out.println("Следующий ход: " + newPlayerSymbol + " (" + nextPlayerName + ")");
         }
 
-        private void printBoard() {
-            String[][] board = gameState.getBoard();
-            System.out.println("Текущее состояние доски:");
-            System.out.println("  0 1 2");
-            for (int i = 0; i < 3; i++) {
-                System.out.print(i + " ");
-                for (int j = 0; j < 3; j++) {
-                    String cell = board[i][j];
-                    if (cell == null || cell.isEmpty()) {
-                        System.out.print("· ");
-                    } else {
-                        System.out.print(cell + " ");
-                    }
-                }
-                System.out.println();
-            }
-            System.out.println();
-        }
 
         public boolean checkWin(String player) {
             String symbol = player.equals(player1) ? "X" : "O";

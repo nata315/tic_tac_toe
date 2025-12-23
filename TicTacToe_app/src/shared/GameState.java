@@ -50,19 +50,4 @@ public class GameState implements Serializable {
         board[row][col] = symbol;
     }
 
-    // Перегруженный метод для char (для совместимости)
-    public void makeMove(int row, int col, char symbol) {
-        makeMove(row, col, String.valueOf(symbol));
-    }
-
-    // Метод для отладки
-    public void printBoard() {
-        System.out.println("GameState Board:");
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                System.out.print("'" + (board[i][j] == null ? "null" : board[i][j]) + "' ");
-            }
-            System.out.println();
-        }
-    }
 }

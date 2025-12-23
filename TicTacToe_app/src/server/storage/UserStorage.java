@@ -6,21 +6,17 @@ package server.storage;
 import java.net.*;           // ServerSocket, Socket
 import java.io.*;            // Потоки ввода/вывода
 // Многопоточность
-import java.sql.Connection;
 import java.util.concurrent.*; // ExecutorService, ThreadPool
 // Работа с файлами
 import java.nio.file.*;      // Files, Paths
 import java.util.*;          // Коллекции
-import java.net.ServerSocket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.net.Socket;
+
 
 import shared.User;
 
 //Работа с файлами пользователей
 public class UserStorage {
-    // Алгоритм: Сериализация объектов в файлы
+    // Сериализация объектов в файлы
     public void saveUser(User user) {
         String filename = "data/users/" + user.getUsername() + ".dat";
 

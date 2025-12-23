@@ -8,7 +8,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.List;
 import java.util.ArrayList;
-import server.storage.GameStorage;
 
 public class GameController {
     private GameWindow gameFrame;
@@ -192,12 +191,9 @@ public class GameController {
 
     private void saveGame() {
         if (gameActive && currentGameId != null) {
-            // Здесь только показ диалога, но нет вызова сохранения!
             gameFrame.showInfoDialog("Информация",
-                    "Игра автоматически сохраняется на сервере.\n" +
+                    "Сохранение игры.\n" +
                             "ID игры: " + currentGameId);
-
-            // ДОБАВЬТЕ ЭТУ СТРОЧКУ:
             clientNetwork.saveGame(currentGameId);
 
         } else {
@@ -389,7 +385,7 @@ public class GameController {
 
     private void processGameStateData(GameMessage message) {
         try {
-            // Способ 1: Попробуем получить как GameState
+            // Получаем как GameState
             Object gameStateObj = message.getData("gameState");
 
             if (gameStateObj instanceof GameState) {
@@ -399,7 +395,7 @@ public class GameController {
                 return;
             }
 
-            // Способ 2: Попробуем получить как SimpleGameState
+            // Получаем как SimpleGameState
             if (gameStateObj != null && gameStateObj.getClass().getName().contains("SimpleGameState")) {
                 try {
                     // Используем рефлексию для доступа к методам SimpleGameState
@@ -431,7 +427,7 @@ public class GameController {
                 }
             }
 
-            // Способ 3: Попробуем получить как список
+            //  Получаем как список
             Object boardListObj = message.getData("board");
             if (boardListObj instanceof List) {
                 @SuppressWarnings("unchecked")
@@ -468,7 +464,7 @@ public class GameController {
                 }
             }
 
-            // Способ 4: Создаем тестовое состояние
+            // Создаем тестовое состояние
             System.out.println("Не удалось получить состояние игры, создаем тестовое");
             GameState testState = new GameState();
             testState.makeMove(2, 0, "X");  // Предполагаем, что игрок походил сюда

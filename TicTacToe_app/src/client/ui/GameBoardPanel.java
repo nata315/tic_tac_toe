@@ -186,10 +186,4 @@ public class GameBoardPanel extends JPanel {
     public void setCellClickListener(CellClickListener listener) {
         this.cellClickListener = listener;
     }
-
-    // метод, который возвращает кнопку по координатам
-    /*public JButton getCell(int row, int col) {
-        if (row < 0 || row >= 3 || col < 0 || col >= 3) return null;
-        return cells[row][col];
-    }*/
 }
