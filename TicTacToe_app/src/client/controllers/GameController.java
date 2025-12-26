@@ -9,33 +9,39 @@ import java.util.TimerTask;
 import java.util.List;
 import java.util.ArrayList;
 
+// класс отвечающий за игровой контроллер
 public class GameController {
+    // ссылки на компоненты игры
     private GameWindow gameFrame;
     private ClientNetwork clientNetwork;
     private Runnable onExit;
 
-    // Данные игры
+    // данные игры
     private String currentGameId;
     private char playerSymbol = 'X';
     private boolean myTurn = false;
     private boolean gameActive = false;
     private boolean vsAI = true;
 
+    // сетевые компоненты
     private Timer gameStateTimer;
     private int moveCount = 0;
 
-    // Счетчик итогов игры
+    // счетчик итогов игры
     private int wins = 0;
     private int losses = 0;
     private int draws = 0;
 
+    // данные сохраненных игр
     private boolean isSavedGame = false;
     private List<String> savedGameIds = new ArrayList<>();
 
+    // конструктор
     public GameController(GameWindow gameFrame, ClientNetwork clientNetwork) {
         this.gameFrame = gameFrame;
         this.clientNetwork = clientNetwork;
 
+        // настройка слушателей событий
         gameFrame.setListener(new GameWindow.GameFrameListener() {
             @Override
             public void onCellClicked(int row, int col) {
@@ -68,35 +74,37 @@ public class GameController {
             }
         });
 
-        // Инициализируем окно игры
+        // Инициализация окна игры
         gameFrame.setStatus("Подключение к серверу...");
         gameFrame.disableBoard();
 
-        // Инициализируем статистику в UI
+        // Инициализация статистики в UI
         updateScoreDisplay();
     }
 
+    // метод, который запускает новую игру
     public void startNewGame(boolean vsAI) {
-        // Завершаем текущую игру на КЛИЕНТЕ
+        // Завершение текущей игры перед началом новой
         if (gameActive && currentGameId != null) {
             endGame("Завершено для новой игры");
         }
 
-        // Сбрасываем состояние
+        // Сброс состояния контроллера
         resetLocalState();
 
         this.vsAI = vsAI;
         this.isSavedGame = false;
 
-        // Очищаем UI
+        // Очистка интерфейса
         gameFrame.clearBoard();
         gameFrame.setStatus("Создание новой игры...");
         gameFrame.disableBoard();
 
-        // Запрашиваем у сервера СОВЕРШЕННО НОВУЮ игру
+        // Отправка запроса на сервер для начала новой игры
         clientNetwork.createNewGame(vsAI);
     }
 
+    // метод, который сбрасывает локальное состояние контроллера
     private void resetLocalState() {
         stopGameStatePolling();
         currentGameId = null;
@@ -106,12 +114,14 @@ public class GameController {
         moveCount = 0;
     }
 
+    // метод, отвечающий за обработку хода игрока
     private void handleMove(int row, int col) {
+        // Проверка возможности хода
         if (!gameActive || !myTurn || currentGameId == null) {
             return;
         }
 
-        // Локальная проверка
+        // Проверка валидности координат
         if (row < 0 || row > 2 || col < 0 || col > 2) {
             gameFrame.setStatus("Неверные координаты");
             return;
@@ -123,23 +133,22 @@ public class GameController {
         System.out.println("Игрок: " + clientNetwork.getCurrentUsername());
         System.out.println("Символ: " + playerSymbol);
 
-        // ЛОКАЛЬНО обновляем клетку для мгновенной обратной связи
+        // Локальное обновление клетки для мгновенной обратной связи
         String[][] tempBoard = new String[3][3];
-        // Копируем текущее состояние (если есть)
-        // И устанавливаем наш ход
         tempBoard[row][col] = String.valueOf(playerSymbol);
         gameFrame.updateBoard(tempBoard);
 
-        // Отключаем клетку, на которую походили
+        // Блокировка клетки и отправление текущего статуса
         gameFrame.disableBoard();
         gameFrame.setStatus("Ход отправлен...");
 
-        // Отправляем ход на сервер
+        // Отправление ход на сервер
         clientNetwork.sendMove(currentGameId, row, col);
         myTurn = false;
         moveCount++;
     }
 
+    // метод, показывающий диалоговое окно для создания новой игры
     private void showNewGameDialog() {
         String[] options = {"Да", "Нет"};
         int choice = JOptionPane.showOptionDialog(gameFrame,
@@ -156,6 +165,7 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за то, что происходит, когда игрок решил сдаться
     private void surrenderGame() {
         if (gameActive) {
             int confirm = JOptionPane.showConfirmDialog(gameFrame,
@@ -170,15 +180,17 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за выход из игры
     public void exitGame() {
         endGame("Выход из игры");
         gameFrame.hideWindow();
 
         if (onExit != null) {
-            onExit.run();
+            onExit.run(); // возврат в LoginWindow
         }
     }
 
+    // метод отвечающий за завершение ткущей игровой сессии
     private void endGame(String message) {
         gameActive = false;
         stopGameStatePolling();
@@ -189,6 +201,7 @@ public class GameController {
         moveCount = 0;
     }
 
+    // метод отвечающий за сохранение текущей игры
     private void saveGame() {
         if (gameActive && currentGameId != null) {
             gameFrame.showInfoDialog("Информация",
@@ -201,12 +214,14 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за загрузку игры
     private void loadGame() {
-        // Запрашиваем список сохраненных игр у сервера
+        // запрос списка сохраненных игр у сервера
         clientNetwork.getSavedGames();
         gameFrame.setStatus("Загрузка списка сохраненных игр...");
     }
 
+     // диалог выбора игры для загрузки
     public void showLoadGameDialog(List<String> gameIds) {
         if (gameIds == null || gameIds.isEmpty()) {
             gameFrame.showInfoDialog("Нет сохраненных игр",
@@ -214,7 +229,7 @@ public class GameController {
             return;
         }
 
-        // Создаем диалог выбора игры
+        // Создание диалога выбора игры
         String[] options = gameIds.toArray(new String[0]);
         String selectedGame = (String) JOptionPane.showInputDialog(
                 gameFrame,
@@ -233,6 +248,7 @@ public class GameController {
         }
     }
 
+    // основной обработчик сообщений от сервера
     public void handleServerMessage(GameMessage message) {
         SwingUtilities.invokeLater(() -> {
             String type = message.getType();
@@ -266,7 +282,7 @@ public class GameController {
 
                     case "LOGIN_RESPONSE":
                     case "REGISTER_RESPONSE":
-                        // Эти сообщения обрабатываются LoginController
+                        // эти сообщения обрабатываются LoginController
                         break;
 
                     case "ERROR":
@@ -285,10 +301,12 @@ public class GameController {
         });
     }
 
+    // обработка ответа на создание новой игры
     private void handleNewGameResponse(GameMessage message) {
         try {
             System.out.println("\n=== КЛИЕНТ: Обработка NEW_GAME_RESPONSE ===");
 
+            // получение данных новой игры от сервера
             currentGameId = (String) message.getData("gameId");
             Object gameStateObj = message.getData("gameState");
             String player2 = (String) message.getData("player2");
@@ -301,12 +319,12 @@ public class GameController {
                 throw new IllegalArgumentException("Некорректный ответ от сервера: нет gameId");
             }
 
-            // Определяем наш символ
+            // определение символа игрока
             String username = clientNetwork.getCurrentUsername();
             playerSymbol = username.equals(player2) ? 'O' : 'X';
             System.out.println("Наш символ: " + playerSymbol);
 
-            // Обновляем интерфейс
+            // обновление интерфейса
             if (gameStateObj != null) {
                 if (gameStateObj instanceof GameState) {
                     updateGameState((GameState) gameStateObj);
@@ -315,10 +333,11 @@ public class GameController {
                 }
             }
 
+            // активация игры
             gameActive = true;
             moveCount = 0;
 
-            // Определяем, наш ли сейчас ход (по умолчанию X начинает)
+            // Определение сейчас ли ход игрока
             myTurn = (playerSymbol == 'X');
 
             if (myTurn) {
@@ -327,12 +346,12 @@ public class GameController {
             } else {
                 gameFrame.setStatus("Ожидание хода противника...");
                 gameFrame.disableBoard();
-                // Если игра против ИИ, и ИИ ходит первым - запускаем polling
                 if (vsAI && "AI".equals(player2)) {
                     startGameStatePolling();
                 }
             }
 
+            // установка информации об игроке
             gameFrame.setPlayerInfo(String.valueOf(playerSymbol));
 
             // Показываем информацию об игре
@@ -351,6 +370,7 @@ public class GameController {
         }
     }
 
+    // Обработка ответа на ход игрока
     private void handleMoveResponse(GameMessage message) {
         System.out.println("\n=== КЛИЕНТ: Обработка MOVE_RESPONSE ===");
 
@@ -359,7 +379,7 @@ public class GameController {
             System.out.println("Success: " + success);
 
             if (success != null && success) {
-                // Пробуем получить данные разными способами
+                // Успешный ход - обновляем состояние игры
                 processGameStateData(message);
             } else {
                 String errorMsg = "Неизвестная ошибка";
@@ -383,9 +403,10 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за извлечение и обработку состояния игры из сообщения
     private void processGameStateData(GameMessage message) {
         try {
-            // Получаем как GameState
+            // Получение, как GameState объекта
             Object gameStateObj = message.getData("gameState");
 
             if (gameStateObj instanceof GameState) {
@@ -395,10 +416,10 @@ public class GameController {
                 return;
             }
 
-            // Получаем как SimpleGameState
+            // Получение, как SimpleGameState
             if (gameStateObj != null && gameStateObj.getClass().getName().contains("SimpleGameState")) {
                 try {
-                    // Используем рефлексию для доступа к методам SimpleGameState
+                    // Использование рефлексии для доступа к методам SimpleGameState
                     Class<?> clazz = gameStateObj.getClass();
                     Object boardObj = clazz.getMethod("getBoard").invoke(gameStateObj);
 
@@ -409,7 +430,7 @@ public class GameController {
                         GameState gameState = new GameState();
                         gameState.setBoard(board);
 
-                        // Получаем остальные поля
+                        // Получение остальных полей
                         Character currentPlayer = (Character) clazz.getMethod("getCurrentPlayer").invoke(gameStateObj);
                         Boolean gameOver = (Boolean) clazz.getMethod("isGameOver").invoke(gameStateObj);
                         String winner = (String) clazz.getMethod("getWinner").invoke(gameStateObj);
@@ -427,7 +448,7 @@ public class GameController {
                 }
             }
 
-            //  Получаем как список
+            //  Получение, как списка
             Object boardListObj = message.getData("board");
             if (boardListObj instanceof List) {
                 @SuppressWarnings("unchecked")
@@ -447,7 +468,7 @@ public class GameController {
                     GameState gameState = new GameState();
                     gameState.setBoard(board);
 
-                    // Получаем дополнительные поля
+                    // Получение дополнительных полей
                     if (message.hasData("currentPlayer")) {
                         gameState.setCurrentPlayer((Character) message.getData("currentPlayer"));
                     }
@@ -464,7 +485,7 @@ public class GameController {
                 }
             }
 
-            // Создаем тестовое состояние
+            // Создание тестового состояния
             System.out.println("Не удалось получить состояние игры, создаем тестовое");
             GameState testState = new GameState();
             testState.makeMove(2, 0, "X");  // Предполагаем, что игрок походил сюда
@@ -478,11 +499,12 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за обработку состояния игры после хода
     private void processGameState(GameState gameState) {
-        // Обновляем UI
+        // обновление интерфейса
         updateGameState(gameState);
 
-        // Проверяем окончание игры
+        // проверка окончания игры
         if (gameState.isGameOver()) {
             String winner = gameState.getWinner();
             if ("DRAW".equals(winner)) {
@@ -504,12 +526,13 @@ public class GameController {
 
             updateScoreDisplay();
         } else {
-            // Обновляем, чей сейчас ход
+            // обновление хода
             myTurn = (gameState.getCurrentPlayer() == playerSymbol);
             System.out.println("Текущий игрок на сервере: " + gameState.getCurrentPlayer());
             System.out.println("Мой символ: " + playerSymbol);
             System.out.println("Мой ход? " + myTurn);
 
+            // проверка чей сейчас ход
             if (myTurn) {
                 gameFrame.setStatus("Ваш ход!");
                 gameFrame.enableBoard();
@@ -517,7 +540,7 @@ public class GameController {
                 gameFrame.setStatus("Ход противника...");
                 gameFrame.disableBoard();
 
-                // Если игра против ИИ, запускаем polling для получения хода ИИ
+                // запуск опроса для получения хода ИИ
                 if (vsAI) {
                     startGameStatePolling();
                 }
@@ -525,10 +548,12 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за обновление статистики игрока
     private void updateScoreDisplay() {
         gameFrame.setScoreInfo(wins, losses, draws);
     }
 
+    // метод отвечающий за обработку ответа на состояние игры
     private void handleGameStateResponse(GameMessage message) {
         try {
             System.out.println("\n=== КЛИЕНТ: Обработка GAME_STATE_RESPONSE ===");
@@ -540,6 +565,7 @@ public class GameController {
                 GameState gameState = (GameState) gameStateObj;
                 updateGameState(gameState);
 
+                // если игра закончилась
                 if (gameOver != null && gameOver) {
                     String winner = (String) message.getData("winner");
                     if ("DRAW".equals(winner)) {
@@ -550,11 +576,11 @@ public class GameController {
                         endGame("Игра окончена. Вы проиграли.");
                     }
                 } else {
-                    // Обновляем статус хода
+                    // обновление статуса хода
                     myTurn = (gameState.getCurrentPlayer() == playerSymbol);
 
                     if (myTurn) {
-                        stopGameStatePolling(); // Больше не нужно опрашивать
+                        stopGameStatePolling();
                         gameFrame.setStatus("Ваш ход!");
                         gameFrame.enableBoard();
                     } else {
@@ -569,6 +595,7 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за обработку ошибки
     private void handleError(GameMessage message) {
         String error = "Неизвестная ошибка";
         if (message.hasData("message")) {
@@ -579,12 +606,12 @@ public class GameController {
         gameFrame.setStatus("Ошибка: " + error);
         gameFrame.showErrorDialog("Ошибка сервера", error);
 
-        // Если ошибка связана с игрой, завершаем ее
         if (gameActive) {
             endGame("Игра прервана из-за ошибки сервера");
         }
     }
 
+    // метод отвечающий за обновление состояния игры
     private void updateGameState(GameState gameState) {
         try {
             String[][] board = gameState.getBoard();
@@ -617,7 +644,7 @@ public class GameController {
                 System.out.println();
             }
 
-            // Обновляем UI
+            // Обновление интерфейса
             gameFrame.updateBoard(displayBoard);
             System.out.println("UI обновлен\n");
 
@@ -625,7 +652,7 @@ public class GameController {
             System.err.println("Ошибка обновления игрового поля: " + e.getMessage());
             e.printStackTrace();
 
-            // Показать тестовые символы для отладки
+            // Тестовые символы для отладки
             String[][] testBoard = new String[3][3];
             testBoard[0][0] = "X";
             testBoard[1][1] = "O";
@@ -635,18 +662,21 @@ public class GameController {
         }
     }
 
+    // периодический опрос состояния игры
     private void startGameStatePolling() {
-        stopGameStatePolling(); // Останавливаем предыдущий таймер
+        stopGameStatePolling(); // Остановка предыдущего таймера
 
         if (!gameActive || currentGameId == null || myTurn) {
             return;
         }
 
         System.out.println("Запуск polling для игры: " + currentGameId);
+        // новый таймер
         gameStateTimer = new Timer(true);
         gameStateTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
+                // если игра активна и сейчас не ход игрока
                 if (gameActive && currentGameId != null && !myTurn) {
                     System.out.println("Опрашиваем состояние игры: " + currentGameId);
                     clientNetwork.getGameState(currentGameId);
@@ -657,6 +687,7 @@ public class GameController {
         }, 1000, 2000); // Начинаем через 1 сек, повторяем каждые 2 сек
     }
 
+    // прекращение периодического опроса состояния игры
     private void stopGameStatePolling() {
         if (gameStateTimer != null) {
             gameStateTimer.cancel();
@@ -664,38 +695,29 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за выход игры
     public void setOnExit(Runnable onExit) {
         this.onExit = onExit;
     }
 
+    // метод показывающий игровое окно
     public void showGameWindow() {
         gameFrame.showWindow();
     }
 
+    // метод скрывающий игровое окно
     public void hideGameWindow() {
         gameFrame.hideWindow();
     }
 
+    // метод сбрасывающий текущую игру
     public void reset() {
         endGame("Игра сброшена");
         gameFrame.clearBoard();
         gameFrame.setStatus("Готов к новой игре");
     }
 
-    // Метод для тестирования UI
-    public void testUI() {
-        System.out.println("=== ТЕСТ UI ===");
-        String[][] testBoard = new String[3][3];
-        testBoard[0][0] = "X";
-        testBoard[1][1] = "O";
-        testBoard[2][2] = "X";
-
-        gameFrame.updateBoard(testBoard);
-        gameFrame.setStatus("Тест UI - символы должны отображаться!");
-        System.out.println("Тестовые символы отправлены");
-    }
-
-    // Добавьте новые методы обработки:
+    // метод отвечающий за ответ на сохранение игры
     private void handleSaveGameResponse(GameMessage message) {
         Boolean success = (Boolean) message.getData("success");
         if (success != null && success) {
@@ -709,6 +731,7 @@ public class GameController {
         }
     }
 
+    // метод отвечающий за обработку ответа на загрузку
     private void handleLoadGameResponse(GameMessage message) {
         Boolean success = (Boolean) message.getData("success");
 
@@ -717,22 +740,22 @@ public class GameController {
             Object gameStateObj = message.getData("gameState");
             String player2 = (String) message.getData("player2");
 
-            // Обновляем состояние игры
+            // обновление состояния игры
             if (gameStateObj instanceof GameState) {
                 GameState gameState = (GameState) gameStateObj;
 
-                // Определяем наш символ
+                // определение символа
                 String username = clientNetwork.getCurrentUsername();
                 playerSymbol = username.equals(player2) ? 'O' : 'X';
 
-                // Обновляем UI
+                // обновление интерфейса
                 updateGameState(gameState);
                 gameFrame.setPlayerInfo(String.valueOf(playerSymbol));
 
                 gameActive = true;
                 isSavedGame = true;
 
-                // Определяем, чей сейчас ход
+                // определение, чей сейчас ход
                 myTurn = (gameState.getCurrentPlayer() == playerSymbol);
 
                 if (myTurn) {
@@ -754,6 +777,7 @@ public class GameController {
         }
     }
 
+    //  метод отвечающий за ответ на получение сохраненных игр
     private void handleGetSavedGamesResponse(GameMessage message) {
         @SuppressWarnings("unchecked")
         List<String> gameIds = (List<String>) message.getData("gameIds");

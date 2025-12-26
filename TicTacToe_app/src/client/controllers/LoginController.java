@@ -6,16 +6,20 @@ import client.ui.LoginWindow;
 import shared.GameMessage;
 import javax.swing.SwingUtilities;
 
+// контроллер авторизации
 public class LoginController {
 
+    // ссылки на компоненты системы
     private LoginWindow loginFrame;
     private ClientNetwork clientNetwork;
     private Runnable onLoginSuccess;
 
+    // конструктор
     public LoginController(LoginWindow loginFrame, ClientNetwork clientNetwork) {
         this.loginFrame = loginFrame;
         this.clientNetwork = clientNetwork;
 
+        // установка слушателя событий
         loginFrame.setListener(new LoginWindow.LoginListener() {
             @Override
             public void onLogin(String username, String password) {
@@ -29,13 +33,16 @@ public class LoginController {
         });
     }
 
+    // метод отвечающий за обработку попытки входа пользователя
     private void handleLogin(String username, String password) {
+        // проверка введенных данных
         if (username == null || username.trim().isEmpty() ||
                 password == null || password.trim().isEmpty()) {
             loginFrame.setStatus("Заполните все поля");
             return;
         }
 
+        // если отсутствует подключение к серверу
         if (!clientNetwork.isConnected()) {
             loginFrame.setStatus("Нет подключения к серверу");
             return;
@@ -49,7 +56,9 @@ public class LoginController {
         }
     }
 
+    // метод отвечающий за обработку попытки регистрации пользователя
     private void handleRegister(String username, String password) {
+        // проверка введенных данных
         if (username == null || username.trim().isEmpty() ||
                 password == null || password.trim().isEmpty()) {
             loginFrame.setStatus("Заполните все поля");
@@ -66,6 +75,7 @@ public class LoginController {
             return;
         }
 
+        // если отсутствует подключение к серверу
         if (!clientNetwork.isConnected()) {
             loginFrame.setStatus("Нет подключения к серверу");
             return;
@@ -79,18 +89,20 @@ public class LoginController {
         }
     }
 
+    // метод отвечающий за обработку сообщений от сервера при попытке регистрации
     public void handleServerResponse(GameMessage message) {
         SwingUtilities.invokeLater(() -> {
             try {
                 String type = message.getType();
 
                 if ("LOGIN_RESPONSE".equals(type)) {
+                    // обработка ответа на вход
                     Boolean success = (Boolean) message.getData("success");
 
                     if (success != null && success) {
                         loginFrame.setStatus("Успешный вход! Перенаправление...");
 
-                        // Небольшая задержка для показа сообщения
+                        // задержка, чтобы показать сообщения
                         new Thread(() -> {
                             try {
                                 Thread.sleep(1000);
@@ -109,6 +121,7 @@ public class LoginController {
                     }
                 }
                 else if ("REGISTER_RESPONSE".equals(type)) {
+                    // обработка ответа на регистрацию
                     Boolean success = (Boolean) message.getData("success");
                     String msg = "Неизвестная ошибка";
 
@@ -118,12 +131,9 @@ public class LoginController {
 
                     loginFrame.setStatus(msg);
 
-                    if (success != null && success) {
-                        // После успешной регистрации очищаем поля
-                        //loginFrame.clearFields();
-                    }
                 }
                 else if ("ERROR".equals(type)) {
+                    // обработка ошибки от сервера
                     String error = "Неизвестная ошибка";
                     if (message.hasData("message")) {
                         error = (String) message.getData("message");

@@ -1,6 +1,3 @@
-//Сетевое подключение к серверу
-
-
 package client;
 
 import shared.*;
@@ -9,17 +6,23 @@ import java.net.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
+//Сетевое подключение к серверу
 public class ClientNetwork {
+    // сетевые компоненты
     private Socket socket;
     private ObjectOutputStream outputStream;
     private ObjectInputStream inputStream;
     private ExecutorService executorService;
+
+    // обработчики событий
     private Consumer<GameMessage> messageHandler;
     private boolean connected;
     private String currentUsername;
 
+    // конструктор
     public ClientNetwork(String host, int port) throws IOException {
         try {
+            // создание входных точек, потоков и интерфейс для их управления
             this.socket = new Socket(host, port);
             this.outputStream = new ObjectOutputStream(socket.getOutputStream());
             this.inputStream = new ObjectInputStream(socket.getInputStream());
@@ -31,11 +34,14 @@ public class ClientNetwork {
         }
     }
 
+    // метод для запуска потока для приема сообщений от сервера
     public void startListening(Consumer<GameMessage> handler) {
         this.messageHandler = handler;
         executorService.submit(() -> {
             try {
+                // пока есть соединение
                 while (connected) {
+                    // читает входной поток и обрабатывает его
                     Object obj = inputStream.readObject();
                     if (obj instanceof GameMessage) {
                         GameMessage message = (GameMessage) obj;
@@ -58,7 +64,9 @@ public class ClientNetwork {
         });
     }
 
+    // метод отправляющий сообщения
     public void sendMessage(GameMessage message) {
+        // при отсутствии связи
         if (!connected) {
             System.err.println("Попытка отправить сообщение при разорванном соединении");
             return;
@@ -74,21 +82,7 @@ public class ClientNetwork {
         }
     }
 
-    // Отправляем сообщение и ждем ответ (синхронно)
-    public GameMessage sendAndWait(GameMessage message, int timeoutMs) {
-        sendMessage(message);
-
-        // В реальной реализации здесь была бы сложная логика ожидания ответа
-        // Но для текущего сервера сделаем просто
-        try {
-            Thread.sleep(100); // Небольшая задержка для имитации сетевого обмена
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        return null; // В этой реализации ответ придет через messageHandler
-    }
-
+    // отправка запроса на вход пользователя
     public boolean login(String username, String password) {
         try {
             GameMessage message = new GameMessage("LOGIN");
@@ -104,6 +98,7 @@ public class ClientNetwork {
         }
     }
 
+    // отправка запроса на регистрацию пользователя
     public boolean register(String username, String password) {
         try {
             GameMessage message = new GameMessage("REGISTER");
@@ -118,6 +113,7 @@ public class ClientNetwork {
         }
     }
 
+    // отправка запроса на создание новой игры
     public void createNewGame(boolean vsAI) {
         try {
             GameMessage message = new GameMessage("NEW_GAME");
@@ -130,6 +126,7 @@ public class ClientNetwork {
         }
     }
 
+    // отправка запроса совершение хода
     public void sendMove(String gameId, int row, int col) {
         try {
             System.out.println("\n=== КЛИЕНТ: Отправка хода ===");
@@ -142,7 +139,7 @@ public class ClientNetwork {
             message.addData("player", currentUsername);
             message.addData("move", new Move(row, col));
 
-            // Проверяем сериализацию Move
+            // проверка сериализацию Move
             Move m = new Move(row, col);
             System.out.println("Создан Move: row=" + m.getRow() + ", col=" + m.getCol());
 
@@ -154,6 +151,7 @@ public class ClientNetwork {
         }
     }
 
+    // запрос текущего состояния игры
     public void getGameState(String gameId) {
         try {
             GameMessage message = new GameMessage("GET_GAME_STATE");
@@ -165,6 +163,7 @@ public class ClientNetwork {
         }
     }
 
+    // завершение работы с сервером
     public void disconnect() {
         connected = false;
         try {
@@ -172,7 +171,7 @@ public class ClientNetwork {
                 socket.close();
             }
         } catch (IOException e) {
-            // Игнорируем ошибку при закрытии
+            // ошибка игнорируется при закрытии
         }
 
         if (executorService != null) {
@@ -190,8 +189,7 @@ public class ClientNetwork {
         System.out.println("Отключено от сервера");
     }
 
-    // Добавьте новые методы:
-
+    // отправка запроса на сохранение игры
     public void saveGame(String gameId) {
         try {
             GameMessage message = new GameMessage("SAVE_GAME");
@@ -204,6 +202,7 @@ public class ClientNetwork {
         }
     }
 
+    // отправка запроса на загрузку игры
     public void loadSavedGame(String gameId) {
         try {
             GameMessage message = new GameMessage("LOAD_GAME");
@@ -216,6 +215,7 @@ public class ClientNetwork {
         }
     }
 
+    // отправка запроса на получение сохраненных игр
     public void getSavedGames() {
         try {
             GameMessage message = new GameMessage("GET_SAVED_GAMES");
@@ -227,10 +227,12 @@ public class ClientNetwork {
         }
     }
 
+    // проверка соединения
     public boolean isConnected() {
         return connected && socket != null && !socket.isClosed();
     }
 
+    // метод отвечающий за получение имени пользователя
     public String getCurrentUsername() {
         return currentUsername;
     }

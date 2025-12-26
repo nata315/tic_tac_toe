@@ -19,40 +19,41 @@ public class MainClient {
     private GameController gameController;
 
     public static void main(String[] args) {
-        // Устанавливаем Look and Feel
+        // Устанавливаем Look and Feel (стиль графического интерфейса)
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // Запускаем в EDT
+        // Запускаем в EDT (специальный поток для обработки событий интерфейса)
         SwingUtilities.invokeLater(() -> {
             new MainClient().start();
         });
     }
 
+    // запуск клиента
     public void start() {
         try {
             System.out.println("=== Запуск клиента Крестики-Нолики ===");
             System.out.println("Сервер: " + SERVER_HOST + ":" + SERVER_PORT);
 
-            // Пробуем подключиться к серверу
+            // попытка подключения к серверу
             clientNetwork = new ClientNetwork(SERVER_HOST, SERVER_PORT);
 
-            // Создаем UI
+            // создание интерфейса
             loginFrame = new LoginWindow();
             gameFrame = new GameWindow();
 
-            // Создаем контроллеры
+            // создание контроллеров
             loginController = new LoginController(loginFrame, clientNetwork);
             gameController = new GameController(gameFrame, clientNetwork);
 
-            // Настраиваем обработку сетевых сообщений
+            // настройка обработки сетевых сообщений
             clientNetwork.startListening(message -> {
                 System.out.println("Получено сетевое сообщение типа: " + message.getType());
 
-                // Перенаправляем сообщения контроллерам
+                // Перенаправление сообщений контроллерам
                 String type = message.getType();
 
                 if (type == null) {
@@ -69,7 +70,7 @@ public class MainClient {
                 }
             });
 
-            // Настраиваем переходы между окнами
+            // настройка перехода между окнами
             loginController.setOnLoginSuccess(() -> {
                 loginController.hideLoginWindow();
                 gameController.showGameWindow();
@@ -83,10 +84,10 @@ public class MainClient {
                 loginController.showLoginWindow();
             });
 
-            // Обработка закрытия окон
+            // обработка закрытия окон
             setupWindowListeners();
 
-            // Показываем окно входа
+            // демонстрация окна входа
             loginController.showLoginWindow();
 
             System.out.println("Клиент успешно инициализирован");
@@ -119,6 +120,7 @@ public class MainClient {
         }
     }
 
+    // настройка обработчиков закрытия окон
     private void setupWindowListeners() {
         // При закрытии окна входа
         loginFrame.addWindowListener(new WindowAdapter() {
@@ -137,6 +139,7 @@ public class MainClient {
         });
     }
 
+    // отключение клиента
     private void shutdown() {
         System.out.println("Завершение работы клиента...");
 
