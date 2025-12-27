@@ -39,13 +39,4 @@ public class ServerCore {
         }
     }
 
-    public void stop() {
-        running = false;
-        threadPool.shutdown();
-        System.out.println("Сервер остановлен");
-    }
-
-    public boolean isRunning() {
-        return running;
-    }
 }
