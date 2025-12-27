@@ -1,6 +1,3 @@
-//Панель игрового поля
-
-
 package client.ui;
 
 import javax.swing.*;

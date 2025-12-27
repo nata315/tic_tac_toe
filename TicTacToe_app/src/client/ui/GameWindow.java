@@ -1,6 +1,3 @@
-//Окно игры
-
-
 package client.ui;
 import javax.swing.*;
 import java.awt.*;

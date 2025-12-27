@@ -1,6 +1,3 @@
-//Окно входа
-
-
 package client.ui;
 
 import javax.swing.*;
